@@ -12,10 +12,7 @@ import com.google.common.collect.Lists;
 import com.jpmorgan.cakeshop.bean.GethConfigBean;
 import com.jpmorgan.cakeshop.dao.PeerDAO;
 import com.jpmorgan.cakeshop.error.APIException;
-import com.jpmorgan.cakeshop.model.Node;
-import com.jpmorgan.cakeshop.model.NodeConfig;
-import com.jpmorgan.cakeshop.model.NodeSettings;
-import com.jpmorgan.cakeshop.model.Peer;
+import com.jpmorgan.cakeshop.model.*;
 import com.jpmorgan.cakeshop.service.GethHttpService;
 import com.jpmorgan.cakeshop.service.GethRpcConstants;
 import com.jpmorgan.cakeshop.service.NodeService;
@@ -38,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import com.jpmorgan.cakeshop.util.ProcessUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -179,10 +177,9 @@ public class NodeServiceImpl implements NodeService, GethRpcConstants {
 
   private String getPrivacyManager() {
 
-      if(gethConfig.isConstellationEnabled() && !isProcessRunning(readPidFromFile(gethConfig.getConstPidFileName()))){
+      if(gethConfig.isConstellationEnabled() && isProcessRunning( ProcessUtils.getUnixPidByName("constellation-node"))){
         return "Constellation";
-      }else if(gethConfig.isTesseraEnabled() && !isProcessRunning(readPidFromFile(gethConfig.getTesseraPidFileName()))){
-
+      }else if(gethConfig.isTesseraEnabled() && isProcessRunning(ProcessUtils.getUnixPidByName("tessera-node"))){
         return "Tessera";
        }else{
         return null;

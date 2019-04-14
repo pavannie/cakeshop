@@ -64,6 +64,11 @@ public interface GethHttpService {
      */
     public Boolean stopConstellation();
 
+    /*
+     * Stop tessera-node node
+     */
+    public Boolean stopTessera();
+
     public void runPostStartupTasks();
 
     /**

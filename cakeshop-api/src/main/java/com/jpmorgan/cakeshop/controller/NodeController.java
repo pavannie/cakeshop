@@ -271,9 +271,35 @@ public class NodeController extends BaseController {
         return new ResponseEntity<>(APIResponse.newSimpleResponse(started), HttpStatus.OK);
     }
 
+    @RequestMapping("/tessera/stop")
+    protected @ResponseBody
+    ResponseEntity<APIResponse> stopTessera() throws APIException {
+      Boolean stopped = gethService.stopTessera();
+      gethConfig.setTesseraEnabled(false);
+      try {
+        gethConfig.save();
+      } catch (IOException ex) {
+        throw new APIException(ex);
+      }
+      return new ResponseEntity<>(APIResponse.newSimpleResponse(stopped), HttpStatus.OK);
+    }
+
+    @RequestMapping("/tessera/start")
+    protected @ResponseBody
+    ResponseEntity<APIResponse> startTessera() throws APIException {
+      Boolean started = gethService.startTessera();
+      gethConfig.setTesseraEnabled(true);
+      try {
+        gethConfig.save();
+      } catch (IOException ex) {
+        throw new APIException(ex);
+      }
+      return new ResponseEntity<>(APIResponse.newSimpleResponse(started), HttpStatus.OK);
+    }
 
 
-    @RequestMapping({"/tessera/status"})
+
+  @RequestMapping({"/tessera/status"})
     protected ResponseEntity<APIResponse> tesseraStatus() throws APIException {
 
       String response =  nodeService.getTesseraStatus(gethConfig.getTessaraUrl()+"/upcheck");

@@ -223,7 +223,7 @@ public class GethHttpServiceImpl implements GethHttpService {
             }
         }else if(gethConfig.isEmbeddedQuorum() && gethConfig.isTesseraEnabled()){
           if (!stopTessera()) {
-            LOG.error("Could not stop tessera");
+            LOG.error("Could not stop tessera-node");
           }
 
         }
@@ -372,14 +372,14 @@ public class GethHttpServiceImpl implements GethHttpService {
         }
       }
     }
-    //TODO: When Windows verision for constellation is available - add the functionality to start it under Windows.
+
     String[] command = new String[]{"/bin/sh", "-c",
-      quorumConfig.getTesseraPath().concat("/tessera").concat(" ").concat(" -configfile ").concat(quorumConfig.getTesseraPath()+"/tessera-config.json")
+      quorumConfig.getTesseraPath().concat("/tessera-node").concat(" ").concat(" -configfile ").concat(quorumConfig.getTesseraPath()+"/tessera-config.json")
         .concat(" 2>> ").concat(tesseraLog.getAbsolutePath())
         .concat(" &")};
 
-   LOG.info("************TESSSERRRAAAA *********************");
-   LOG.info(Arrays.toString(command));
+
+    LOG.info(Arrays.toString(command));
     ProcessBuilder builder = new ProcessBuilder(command);
     try {
       Process process = builder.start();
@@ -387,7 +387,7 @@ public class GethHttpServiceImpl implements GethHttpService {
       writePidToFile(constProcessId, gethConfig.getTesseraPidFileName());
       success = true;
       LOG.info("Tessera started as " + String.join(" ", builder.command()));
-      TimeUnit.SECONDS.sleep(200);
+      TimeUnit.SECONDS.sleep(5);
     } catch (IOException | InterruptedException ex) {
       LOG.error(ex.getMessage());
     }
@@ -412,11 +412,11 @@ public class GethHttpServiceImpl implements GethHttpService {
         return success;
     }
 
-
+  @Override
   public Boolean stopTessera() {
     Boolean success = false;
     try {
-      String pid = ProcessUtils.getUnixPidByName("tessera");
+      String pid = ProcessUtils.getUnixPidByName("tessera-node");
       if (StringUtils.isNotBlank(pid)) {
         success = killProcess(pid, null);
         LOG.info("Stopping tessera with pid " + pid);
@@ -466,10 +466,9 @@ public class GethHttpServiceImpl implements GethHttpService {
                 additionalParams = setAdditionalParams(additionalParams).toArray(new String[setAdditionalParams(additionalParams).size()]);
                 if (gethConfig.isConstellationEnabled() && !isProcessRunning(readPidFromFile(gethConfig.getConstPidFileName())) && !gethConfig.IS_BOOT_NODE) {
                     startConstellation();
-                }//TODO: check for tessera process id running
+                }//TODO: check for tessera-node process id running
                 else if (gethConfig.isTesseraEnabled() ){
                   startTessera();
-
                 }
             }
 

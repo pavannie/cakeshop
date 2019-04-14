@@ -135,6 +135,8 @@ public class GethConfigBean {
     private final String GETH_RAFT_NETWORK_ID = "geth.raft.network.id";
 
     private final String TESSERA_URL =  "geth.tessera.url";
+    // by default start constellation
+    private final String PRIVACY_MANAGER = "geth.privacy.manager";
 
     public GethConfigBean() {
     }
@@ -258,38 +260,34 @@ public class GethConfigBean {
             setGethPath(quorumConfig.getQuorumPath());
 
 
-
-          String destination =  null;
-            if(isConstellationEnabled()) {
-               destination = StringUtils.isNotBlank(System.getProperty("spring.config.location"))
+            // build constellation config
+            String constellationConfig =  StringUtils.isNotBlank(System.getProperty("spring.config.location"))
                 ? System.getProperty("spring.config.location").replaceAll("file:", "")
                 .replaceAll("application.properties", "").concat("constellation-node/")
                 : getDataDirPath().concat("/constellation/");
 
-              quorumConfig.createConstellationKeys("node", destination);
-              quorumConfig.createConstellationConfig("node", destination);
+              quorumConfig.createConstellationKeys("node", constellationConfig);
+              quorumConfig.createConstellationConfig("node", constellationConfig);
 
               setConstPidFileName(expandPath(CONFIG_ROOT, "constellation.pid"));
 
-              //only needed for constellation
-              File pubKey = new File(destination.concat("node.pub"));
+              //only needed for constellation\
+              File pubKey = new File(constellationConfig.concat("node.pub"));
               try (Scanner scanner = new Scanner(pubKey)) {
                 while (scanner.hasNext()) {
                   setPublicKey(scanner.nextLine());
                 }
               }
-            }else {
-               destination = StringUtils.isNotBlank(System.getProperty("spring.config.location"))
+
+              // build tessera-node config
+              String tesseraConfig = StringUtils.isNotBlank(System.getProperty("spring.config.location"))
                 ? System.getProperty("spring.config.location").replaceAll("file:", "")
                 .replaceAll("application.properties", "").concat("tessera-node/")
                 : getDataDirPath().concat("/tessera/");
-
                //TODO: create Tessera config in this directory
               setTesseraPidFileName(expandPath(CONFIG_ROOT, "tessera.pid"));
-              quorumConfig.setTesseraConfigPath(destination);
-
-            }
-            setIsEmbeddedQuorum(true);
+              quorumConfig.setTesseraConfigPath(tesseraConfig);
+              setIsEmbeddedQuorum(true);
 
 
         }
@@ -603,19 +601,33 @@ public class GethConfigBean {
     }
 
     public Boolean isConstellationEnabled() {
-        return Boolean.valueOf(get(GETH_CONSTELLATION_ENABLED, "false"));
+        String privacyManager =  get(PRIVACY_MANAGER,"constellation");
+
+        return "constellation".equalsIgnoreCase(privacyManager);
     }
 
     public void setConstellationEnabled(Boolean isEnabled) {
-        props.setProperty(GETH_CONSTELLATION_ENABLED, String.valueOf(isEnabled));
+       if(isEnabled){
+         props.setProperty(PRIVACY_MANAGER, "constellation");
+       }else{
+         props.remove(PRIVACY_MANAGER);
+       }
+
     }
 
     public Boolean isTesseraEnabled() {
-      return Boolean.valueOf(get(GETH_TESSERA_ENABLED, "true"));
+      String privacyManager =  get(PRIVACY_MANAGER,"constellation");
+
+      return "tessera".equalsIgnoreCase(privacyManager);
     }
 
     public void setTesseraEnabled(Boolean isEnabled) {
-      props.setProperty(GETH_TESSERA_ENABLED, String.valueOf(isEnabled));
+      if(isEnabled){
+        props.setProperty(PRIVACY_MANAGER, "tessera");
+      }else{
+        props.remove(PRIVACY_MANAGER);
+      }
+
     }
     public Boolean isPermissionedNode() {
         return Boolean.valueOf(get(GETH_PERMISSIONED, "false"));

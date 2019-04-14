@@ -1889,9 +1889,119 @@
             }
           }
         }
-      }
+      },
+      "/node/tessera/stop": {
+        "post": {
+          "tags": [
+            "node"
+          ],
+          "description": "[Quorum only] Stops Tessera node from running. May cause node to restart.",
+          "consumes": [
+            "application/json"
+          ],
+          "produces": [
+            "application/json"
+          ],
+          "responses": {
+            "200": {
+              "description": "Success"
+            },
+            "4xx": {
+              "description": "Error with the request",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "errors": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/APIError"
+                    }
+                  },
+                  "meta": {
+                    "type": "object",
+                    "description": "Extra metadata, such as API version"
+                  }
+                }
+              }
+            },
+            "5xx": {
+              "description": "Error processing the request",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "errors": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/APIError"
+                    }
+                  },
+                  "meta": {
+                    "type": "object",
+                    "description": "Extra metadata, such as API version"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
 
-	},
+      "/node/tessera/start": {
+        "post": {
+          "tags": [
+            "node"
+          ],
+          "description": "[Quorum only] Starts Tessera node if its currently not running. May cause node to restart.",
+          "consumes": [
+            "application/json"
+          ],
+          "produces": [
+            "application/json"
+          ],
+          "responses": {
+            "200": {
+              "description": "Success"
+            },
+            "4xx": {
+              "description": "Error with the request",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "errors": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/APIError"
+                    }
+                  },
+                  "meta": {
+                    "type": "object",
+                    "description": "Extra metadata, such as API version"
+                  }
+                }
+              }
+            },
+            "5xx": {
+              "description": "Error processing the request",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "errors": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/APIError"
+                    }
+                  },
+                  "meta": {
+                    "type": "object",
+                    "description": "Extra metadata, such as API version"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
 	"definitions": {
 		"Account": {
 			"properties": {
