@@ -15,7 +15,6 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -284,10 +283,12 @@ public class GethConfigBean {
                 ? System.getProperty("spring.config.location").replaceAll("file:", "")
                 .replaceAll("application.properties", "").concat("tessera-node/")
                 : getDataDirPath().concat("/tessera/");
+                quorumConfig.createTesseraKeys("tm",tesseraConfig);
+                quorumConfig.createTesseraConfig("tm",tesseraConfig,getTessaraUrl());
                //TODO: create Tessera config in this directory
-              setTesseraPidFileName(expandPath(CONFIG_ROOT, "tessera.pid"));
-              quorumConfig.setTesseraConfigPath(tesseraConfig);
-              setIsEmbeddedQuorum(true);
+                setTesseraPidFileName(expandPath(CONFIG_ROOT, "tessera.pid"));
+                quorumConfig.setTesseraConfigPath(tesseraConfig);
+                setIsEmbeddedQuorum(true);
 
 
         }
