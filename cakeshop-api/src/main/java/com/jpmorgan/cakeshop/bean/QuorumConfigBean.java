@@ -211,19 +211,12 @@ public class QuorumConfigBean implements InitializingBean { // TODO: rename to C
 
     private void createKeys(String keyGenCommand, String keyGenParams,String destination,String keyName) throws IOException, InterruptedException {
       String.format(keyGenParams, expandPath(destination, keyName));
-      System.out.println("******************* expand path"+expandPath(destination, keyName));
-      System.out.println("********************* generate command for key at "+      String.format(keyGenParams, expandPath(destination, keyName)));
-      System.out.println("************************destination************"+destination);
-      System.out.println("***********argsss*********"+Arrays.toString((String.format(keyGenParams, expandPath(destination, keyName)).split("\\s"))));
 
       List<String> commandArgs = new ArrayList<String>();
       commandArgs.add(keyGenCommand);
       commandArgs.addAll(Arrays.asList(
         String.format(keyGenParams, expandPath(destination, keyName)).split("\\s")));
 
-      for(int i=0 ;i < commandArgs.size();i++){
-        System.out.println(commandArgs.get(i));
-      }
       ProcessBuilder pb = new ProcessBuilder(commandArgs);
       pb.redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
       LOG.info("keygen command: " +  String.join(" ", pb.command()));
