@@ -8,18 +8,21 @@ package com.jpmorgan.cakeshop.bean;
 import com.jpmorgan.cakeshop.util.FileUtils;
 import static com.jpmorgan.cakeshop.util.FileUtils.expandPath;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.URL;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Scanner;
+import java.util.*;
 
+import com.quorum.tessera.config.Config;
+import com.quorum.tessera.config.JdbcConfig;
+import com.quorum.tessera.config.SslAuthenticationMode;
+import com.quorum.tessera.config.SslTrustMode;
+import com.quorum.tessera.config.builder.ConfigBuilder;
+import com.quorum.tessera.config.builder.KeyDataBuilder;
+import com.quorum.tessera.config.util.jaxb.MarshallerBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
@@ -27,6 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import javax.xml.bind.JAXBException;
 
 @Component
 public class QuorumConfigBean implements InitializingBean { // TODO: rename to ConstellationConfigBean
@@ -38,19 +43,31 @@ public class QuorumConfigBean implements InitializingBean { // TODO: rename to C
     private static final String CONSTELLATION_LINUX_COMMAND = "quorum/constellation/linux/constellation-node";
     private static final String CONSTELLATION_MAC_COMMAND = "quorum/constellation/mac/constellation-node";
     private static final String CONSTELLATION_LINUX_KEYGEN = "quorum/constellation/linux/constellation-node";
-    private static final String CONSTELLATION_LINUX_KEYGEN_PARAMS = "--generatekeys=node";
+    private static final String CONSTELLATION_LINUX_KEYGEN_PARAMS = "--generatekeys=%s";
     private static final String CONSTELLATION_MAC_KEYGEN = "quorum/constellation/mac/constellation-node";
-    private static final String CONSTELLATION_MAC_KEYGEN_PARAMS = "--generatekeys=node";
+    private static final String CONSTELLATION_MAC_KEYGEN_PARAMS = "--generatekeys=%s";
+    private static final String TESSERA_LINUX_KEYGEN = "quorum/tessera/linux/tessera-node";
+    private static final String TESEERA_LINUX_KEYGEN_PARAMS = "-keygen -filename %s";
     private final String CONSTELLATION_URL = StringUtils.isNotBlank(System.getProperty("geth.constellation.url"))
             ? System.getProperty("geth.constellation.url") : "http://127.0.0.1:9000";
+    private final String TESSERA_URL = StringUtils.isNotBlank(System.getProperty("geth.tessera.url"))
+    ? System.getProperty("geth.tessera.url") : "http://127.0.0.1:9000";
 
     private final String EMBEDDED_NODE = null != System.getProperty("geth.node") ? System.getProperty("geth.node") : null;
+    private static final String TESSERA_LINUX_COMMAND_PATH = "quorum/tessera/linux/";
 
     private String quorumPath;
     private String constellationPath;
     private String keyGen;
     private String keyGenParams;
+    private String tesseraKeyGen;
+    private String tesseraKeyParams;
     private String constellationConfig;
+
+
+    private String tesseraPath;
+    private String tesseraConfig;
+
 
     @Value("${geth.bootnodes.list:\"\"}")
     private String bootNodes;
@@ -89,6 +106,14 @@ public class QuorumConfigBean implements InitializingBean { // TODO: rename to C
         this.constellationPath = constallationPath;
     }
 
+    public String getTesseraPath() {
+      return tesseraPath;
+    }
+
+    public void setTesseraPath(String tesseraPath) {
+      this.tesseraPath = tesseraPath;
+    }
+
     /**
      * @return the keyGen
      */
@@ -125,6 +150,11 @@ public class QuorumConfigBean implements InitializingBean { // TODO: rename to C
         return constellationConfig;
     }
 
+    public String getTesseraConfigPath() {
+      return tesseraConfig;
+    }
+
+
     /**
      * @return the bootNode
      */
@@ -153,43 +183,84 @@ public class QuorumConfigBean implements InitializingBean { // TODO: rename to C
         return isBootNode;
     }
 
+    public String getTesseraKeyGen() {
+      return tesseraKeyGen;
+    }
+
+    public void setTesseraKeyGen(String tesseraKeyGen) {
+      this.tesseraKeyGen = tesseraKeyGen;
+    }
+
+    public String getTesseraKeyParams() {
+      return tesseraKeyParams;
+    }
+
+    public void setTesseraKeyParams(String tesseraKeyParams) {
+      this.tesseraKeyParams = tesseraKeyParams;
+    }
+
     public void createConstellationKeys(final String keyName, final String destination) throws IOException, InterruptedException {
         constellationConfig = destination;
         File dir = new File(destination);
-        Boolean createKeys = true;
 
-        if (!dir.exists()) {
-            dir.mkdirs();
-        } else {
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(destination), keyName + ".{key,pub}")) {
-                int found = 0;
-                for (Path entry: stream) {
-                    LOG.info("found key file: " + entry);
-                    found++;
-                    if (found == 2) { createKeys = false; break;}
-                }
-            }
+      if (!keysExists(keyName, destination, dir)) {
+            //create keys
+           createKeys(getKeyGen(),getKeyGenParams(),destination,keyName);
+      }
+    }
+
+    private void createKeys(String keyGenCommand, String keyGenParams,String destination,String keyName) throws IOException, InterruptedException {
+      String.format(keyGenParams, expandPath(destination, keyName));
+
+      List<String> commandArgs = new ArrayList<String>();
+      commandArgs.add(keyGenCommand);
+      commandArgs.addAll(Arrays.asList(
+        String.format(keyGenParams, expandPath(destination, keyName)).split("\\s")));
+
+      ProcessBuilder pb = new ProcessBuilder(commandArgs);
+      pb.redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
+      LOG.info("keygen command: " +  String.join(" ", pb.command()));
+      Process process = pb.start();
+      SendReturnToProcess(process);
+      int ret = process.waitFor();
+      if (ret != 0) {
+          LOG.error("Failed to generate keys with code " + ret);
+      }
+
+      if (process.isAlive()) {
+          process.destroy();
+      }
+    }
+
+  public void createTesseraKeys(final String keyName, final String destination) throws IOException, InterruptedException{
+      File dir = new File(destination);
+        if (!keysExists(keyName, destination, dir)) {
+          //create keys
+          createKeys(getTesseraKeyGen(),getTesseraKeyParams(),destination,keyName);
         }
 
-        if (createKeys) {
-            //create keys
-            ProcessBuilder pb = new ProcessBuilder(getKeyGen(), getKeyGenParams());
-            LOG.info("keygen command: " +  String.join(" ", pb.command()));
-            Process process = pb.start();
-            SendReturnToProcess(process);
-            int ret = process.waitFor();
-            MoveKeyFiles(keyName, destination); // TODO: this shouldn't be necessary
-            if (ret != 0) {
-                LOG.error("Failed to generate keys with code " + ret);
-            }
 
-            if (process.isAlive()) {
-                process.destroy();
+    }
+
+    private Boolean keysExists(String keyName, String destination, File dir) throws IOException {
+    if (!dir.exists()) {
+        dir.mkdirs();
+        return false;
+    } else {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(destination), keyName + ".{key,pub}")) {
+            int found = 0;
+            for (Path entry: stream) {
+                LOG.info("found key file: " + entry);
+                found++;
+                if (found == 2) { return true;}
             }
         }
     }
+    return false;
 
-    static void SendReturnToProcess(Process process) throws IOException {
+  }
+
+  static void SendReturnToProcess(Process process) throws IOException {
         try (Scanner scanner = new Scanner(process.getInputStream())) {
             boolean flag = scanner.hasNext();
             while (flag) {
@@ -277,8 +348,11 @@ public class QuorumConfigBean implements InitializingBean { // TODO: rename to C
             LOG.debug("Using quorum for linux");
             setQuorumPath(expandPath(baseResourcePath, QUORUM_LINUX_COMMAND));
             setConstellationPath(expandPath(baseResourcePath, CONSTELLATION_LINUX_COMMAND));
+            setTesseraPath(expandPath(baseResourcePath, TESSERA_LINUX_COMMAND_PATH));
             setKeyGen(expandPath(baseResourcePath, CONSTELLATION_LINUX_KEYGEN));
             setKeyGenParams(CONSTELLATION_LINUX_KEYGEN_PARAMS);
+            setTesseraKeyGen(expandPath(baseResourcePath,TESSERA_LINUX_KEYGEN));
+            setTesseraKeyParams(TESEERA_LINUX_KEYGEN_PARAMS);
 
         } else if (SystemUtils.IS_OS_MAC_OSX) {
             LOG.debug("Using quorum for mac");
@@ -316,5 +390,63 @@ public class QuorumConfigBean implements InitializingBean { // TODO: rename to C
         }
 
     }
+
+    public void setTesseraConfigPath(String destination){
+      this.tesseraConfig =  destination;
+    }
+
+  /**
+   * Create Tessera Configfile
+   * @param keyName
+   * @param tesseraConfigPath
+   */
+    public void createTesseraConfig(String keyName, String tesseraConfigPath,String tesseraUrl) {
+      String prefix = Paths.get(tesseraConfigPath, keyName).toString();
+      File confFile = Paths.get(tesseraConfigPath, "tessera" + ".json").toFile();
+      List<String> peers = new ArrayList<String>();
+      peers.add(tesseraUrl);
+      List<String> alwaysSend = new ArrayList<>();
+
+      if (confFile.exists()) {
+        LOG.info("reusing tessera config at " + confFile.getPath());
+        return;
+      }
+      try (FileOutputStream fileOutputStream = new FileOutputStream(confFile)) {
+        URL url = new URL(tesseraUrl);
+        JdbcConfig jdbcConfig = new JdbcConfig("", "", "jdbc:h2:mem:tessera");
+        jdbcConfig.setAutoCreateTables(true);
+        Config config = ConfigBuilder.create()
+          .unixSocketFile(prefix + ".ipc")
+          .useWhiteList(false)
+          .jdbcConfig(jdbcConfig)
+          .keyData(
+            KeyDataBuilder.create()
+              .withPublicKeys(Collections.singletonList(prefix + ".pub"))
+              .withPrivateKeys(Collections.singletonList(prefix + ".key"))
+              .build()
+          )
+          .peers(peers)
+          .serverHostname(url.getProtocol() + "://" + url.getHost())
+          .serverPort(url.getPort())
+          .sslAuthenticationMode(SslAuthenticationMode.OFF)
+          .sslClientTrustMode(SslTrustMode.TOFU)
+          .sslClientTrustMode(SslTrustMode.TOFU)
+          .build();
+
+
+        System.setProperty("javax.xml.bind.context.factory","org.eclipse.persistence.jaxb.JAXBContextFactory");
+        MarshallerBuilder.create().withoutBeanValidation().build().marshal(config, fileOutputStream);
+        fileOutputStream.flush();
+        LOG.info("created tessera config at " + confFile.getPath());
+      } catch (IOException | JAXBException e) {
+        LOG.error("Error occured while building tessera  config",e);
+      }
+
+
+  }
+
+
+
+
 
 }

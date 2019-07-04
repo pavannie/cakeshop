@@ -1,0 +1,47 @@
+{
+    "useWhiteList": false,
+    "jdbc": {
+        "username": "sa",
+        "password": "",
+        "url": "jdbc:h2:/home/quorum/develop/cakeshop-bin3/data/local/tessera-node/db2;MODE=Oracle;TRACE_LEVEL_SYSTEM_OUT=0",
+        "autoCreateTables": true
+    },
+    "serverConfigs":[
+        {
+            "app":"ThirdParty",
+            "enabled": true,
+            "serverAddress": "http://localhost:9082",
+            "communicationType" : "REST"
+        },
+        {
+            "app":"Q2T",
+            "enabled": true,
+             "serverAddress":"unix:/home/quorum/develop/cakeshop-bin3/data/local/tessera-node/tm.ipc",
+            "communicationType" : "REST"
+        },
+        {
+            "app":"P2P",
+            "enabled": true,
+            "serverAddress":"http://localhost:9000",
+            "sslConfig": {
+                "tls": "OFF"
+            },
+            "communicationType" : "REST"
+        }
+    ],
+    "peer": [
+        {
+            "url": "http://localhost:9000"
+        }
+    ],
+    "keys": {
+        "passwords": [],
+        "keyData": [
+            {
+                "privateKeyPath": "/home/quorum/develop/quorum-examples/examples/7nodes/qdata/c2/tm.key",
+                "publicKeyPath": "/home/quorum/develop/quorum-examples/examples/7nodes/qdata/c2/tm.pub"
+            }
+        ]
+    },
+    "alwaysSendTo": []
+}

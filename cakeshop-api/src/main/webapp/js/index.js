@@ -367,6 +367,14 @@ window.Tower = {
 
 			Dashboard.showSection('wallet', widgets);
 		},
+
+		'tessera': function() {
+    			var widgets = [
+    				{ widgetId: 'tessera' }
+    			];
+
+    			Dashboard.showSection('tessera', widgets);
+    },
 	},
 
 
@@ -420,7 +428,7 @@ $(function() {
 			return;
 		}
 
-		e.preventDefault();
+		e.preventDefault();id
 
 		Tower.current = id;
 
